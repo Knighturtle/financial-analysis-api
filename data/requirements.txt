@@ -1,0 +1,11 @@
+pandas
+numpy
+matplotlib
+scikit-learn
+xgboost
+torch==2.3.1; platform_system!="Windows"  # 失敗する環境もあるので任意
+torch==2.3.1+cpu; platform_system=="Windows"
+transformers
+sentencepiece
+tqdm
+streamlit
