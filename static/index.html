@@ -9,12 +9,22 @@
         :root {
             --bg-color: #0f172a;
             --card-bg: #1e293b;
+            --input-bg: #334155;
             --text-color: #f1f5f9;
+            --muted-color: #94a3b8;
             --accent: #3b82f6;
             --accent-hover: #2563eb;
+            --accent-purple: #8b5cf6;
+            --accent-purple-hover: #7c3aed;
             --success: #22c55e;
-            --warning: #eab308;
+            --warning: #fbbf24;
+            --warning-bg: rgba(251, 191, 36, 0.1);
             --error: #ef4444;
+            --border: #475569;
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body {
@@ -27,7 +37,7 @@
         }
 
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
         }
 
@@ -35,6 +45,24 @@
             text-align: center;
             margin-bottom: 2rem;
             font-weight: 800;
+            background: linear-gradient(to right, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        h2 {
+            font-size: 1.25rem;
+            margin-top: 0;
+            color: var(--text-color);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        h3 {
+            font-size: 1.1rem;
+            color: var(--accent);
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
         }
 
         .card {
@@ -42,83 +70,179 @@
             border-radius: 12px;
             padding: 2rem;
             margin-bottom: 2rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            color: var(--muted-color);
+            font-weight: 600;
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .nav-btn:hover {
+            color: var(--text-color);
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-btn.active {
+            color: white;
+            background-color: var(--accent);
+        }
+
+        .nav-btn.purple.active {
+            background-color: var(--accent-purple);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
         }
 
         .form-group {
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
         }
 
         label {
             display: block;
             font-weight: 600;
             margin-bottom: 0.5rem;
+            font-size: 0.9rem;
         }
 
-        input[type="text"] {
+        input[type="text"],
+        select {
             width: 100%;
             padding: 0.75rem;
             border-radius: 8px;
-            border: 1px solid #475569;
-            background-color: #334155;
+            border: 1px solid var(--border);
+            background-color: var(--input-bg);
             color: white;
             font-size: 1rem;
-            box-sizing: border-box;
+        }
+
+        input:focus,
+        select:focus {
+            outline: 2px solid var(--accent);
+            border-color: transparent;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
         }
 
         input[type="checkbox"] {
-            margin-right: 0.5rem;
-            transform: scale(1.2);
+            width: 1.2rem;
+            height: 1.2rem;
+            cursor: pointer;
         }
 
-        button {
+        button.action-btn {
             width: 100%;
             padding: 0.75rem;
             border-radius: 8px;
             border: none;
-            background-color: var(--accent);
             color: white;
             font-weight: 700;
             font-size: 1rem;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: opacity 0.2s;
+            margin-top: 1rem;
         }
 
-        button:hover {
-            background-color: var(--accent-hover);
+        button.action-btn:hover {
+            opacity: 0.9;
         }
 
-        button:disabled {
-            background-color: #475569;
+        button.action-btn:disabled {
+            background-color: var(--border);
             cursor: not-allowed;
         }
 
-        .result-section {
-            display: none;
+        .btn-primary {
+            background-color: var(--accent);
         }
 
-        .status-badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 999px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
+        .btn-purple {
+            background-color: var(--accent-purple);
         }
 
-        .status-success {
-            background-color: rgba(34, 197, 94, 0.2);
-            color: var(--success);
+        .btn-gray {
+            background-color: var(--border);
+            font-size: 0.9rem;
+            padding: 0.5rem;
         }
 
-        .status-warning {
-            background-color: rgba(234, 179, 8, 0.2);
+        /* Results */
+        .result-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .meta-item strong {
+            display: block;
+            color: var(--muted-color);
+            margin-bottom: 0.2rem;
+        }
+
+        .warning-banner {
+            background-color: var(--warning-bg);
+            border: 1px solid var(--warning);
             color: var(--warning);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .status-error {
-            background-color: rgba(239, 68, 68, 0.2);
-            color: var(--error);
+        .text-content {
+            white-space: pre-wrap;
+            font-size: 1rem;
+            color: #cbd5e1;
+        }
+
+        ul {
+            padding-left: 1.5rem;
+            margin: 0.5rem 0;
+        }
+
+        li {
+            margin-bottom: 0.4rem;
+            color: #cbd5e1;
         }
 
         pre {
@@ -126,16 +250,40 @@
             padding: 1rem;
             border-radius: 8px;
             overflow-x: auto;
-            font-size: 0.875rem;
+            font-size: 0.8rem;
+            border: 1px solid var(--border);
         }
 
-        .output-box h3 {
-            margin-top: 0;
-            color: var(--accent);
+        details {
+            margin-top: 1rem;
         }
 
-        .output-box p {
-            margin-bottom: 0.5rem;
+        summary {
+            cursor: pointer;
+            color: var(--muted-color);
+            font-size: 0.9rem;
+        }
+
+        summary:hover {
+            color: var(--text-color);
+        }
+
+        .badge {
+            padding: 0.2rem 0.6rem;
+            border-radius: 99px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .badge-success {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--success);
+        }
+
+        .badge-fail {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--error);
         }
     </style>
 </head>
@@ -144,140 +292,306 @@
     <div class="container">
         <h1>Financial Analysis API</h1>
 
-        <div class="card">
-            <div class="form-group">
-                <label for="ticker">Ticker Symbol</label>
-                <input type="text" id="ticker" placeholder="e.g. NVDA, AAPL, MSFT" value="NVDA">
-            </div>
-            <div class="form-group">
-                <label for="question">Analysis Question</label>
-                <input type="text" id="question" placeholder="e.g. Brief summary of risks" value="Brief summary">
-            </div>
-            <div class="form-group">
-                <label>
-                    <input type="checkbox" id="use_ai" checked>
-                    Use AI Analysis
-                </label>
-            </div>
-            <div id="btnGroup" style="display: flex; gap: 1rem;">
-                <button id="analyzeBtn" onclick="analyze()">Analyze Financials (Metrics)</button>
-                <button id="analyze10kBtn" onclick="analyze10k()" style="background-color: #7c3aed;">Analyze Full 10-K
-                    (AI)</button>
-            </div>
+        <!-- Navigation -->
+        <div class="nav-tabs">
+            <button class="nav-btn active" onclick="switchTab('quick')">Quick Analysis</button>
+            <button class="nav-btn purple" onclick="switchTab('deep')">Deep 10-K Research</button>
+            <button class="nav-btn" onclick="switchTab('debug')">Debug / Tools</button>
         </div>
 
-        <div id="result" class="result-section">
+        <!-- Quick Analysis Tab -->
+        <div id="quick" class="tab-content active">
             <div class="card">
-                <div id="statusBadge" class="status-badge status-success">Available</div>
-
-                <div id="aiContent" class="output-box">
-                    <h3>Executive Summary</h3>
-                    <p id="execSummary">Loading...</p>
-                    <h3>Risks / Key Points</h3>
-                    <div id="risks">Loading...</div>
+                <h2>Quick Metrics & Summary</h2>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Ticker Symbol</label>
+                        <input type="text" id="quick_ticker" value="NVDA" placeholder="e.g. NVDA">
+                    </div>
+                    <div class="form-group">
+                        <label>Question</label>
+                        <input type="text" id="quick_question" value="Brief summary of risks" placeholder="e.g. Risks">
+                    </div>
                 </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="quick_use_ai" checked> <label for="quick_use_ai">Use AI Analysis</label>
+                </div>
+                <button class="action-btn btn-primary" onclick="runQuickAnalysis()">Analyze Financials</button>
+            </div>
 
-                <details style="margin-top: 1rem;">
-                    <summary style="cursor: pointer; color: #94a3b8;">Raw JSON Response</summary>
-                    <pre id="rawJson">{}</pre>
+            <div id="quick_result" style="display:none;" class="card">
+                <div id="quick_status" class="warning-banner" style="display:none;"></div>
+                <h3>Executive Summary</h3>
+                <p id="quick_summary" class="text-content">Loading...</p>
+                <h3>Risks</h3>
+                <p id="quick_risks" class="text-content">Loading...</p>
+                <details>
+                    <summary>Raw Response</summary>
+                    <pre id="quick_raw"></pre>
                 </details>
             </div>
         </div>
+
+        <!-- Deep 10-K Research Tab -->
+        <div id="deep" class="tab-content">
+            <div class="card" style="border-top: 4px solid var(--accent-purple);">
+                <h2>AI-Powered 10-K Deep Dive</h2>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Ticker Symbol</label>
+                        <input type="text" id="deep_ticker" value="NVDA" placeholder="e.g. MSFT">
+                    </div>
+                    <div class="form-group">
+                        <label>Analysis Focus</label>
+                        <select id="deep_focus">
+                            <option value="overview">Overview (Strategy & Business)</option>
+                            <option value="risks">Risks & Uncertainties</option>
+                            <option value="financials">Financial Condition (MD&A)</option>
+                            <option value="guidance">Future Outlook & Guidance</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="deep_use_ai" checked> <label for="deep_use_ai">Enable AI Processing
+                        (Consumes Quota)</label>
+                </div>
+                <button class="action-btn btn-purple" onclick="runDeepAnalysis()">Analyze Latest 10-K</button>
+            </div>
+
+            <div id="deep_result" style="display:none;" class="card">
+                <!-- Meta Data -->
+                <div class="result-meta" id="deep_meta">
+                    <!-- filled by JS -->
+                </div>
+
+                <!-- Warning Banner -->
+                <div id="deep_warning" class="warning-banner" style="display:none;">
+                    ⚠ AI Analysis Unavailable. Showing metadata only.
+                </div>
+
+                <!-- Analysis Content -->
+                <div id="deep_content">
+                    <h3>Executive Summary</h3>
+                    <div id="an_summary" class="text-content"></div>
+
+                    <h3>Key Points</h3>
+                    <div id="an_points"></div>
+
+                    <h3>Risk Factors</h3>
+                    <div id="an_risks"></div>
+
+                    <h3>Financial Drivers</h3>
+                    <div id="an_drivers"></div>
+
+                    <h3>What to Watch</h3>
+                    <div id="an_watch"></div>
+                </div>
+
+                <details>
+                    <summary>Raw JSON Data</summary>
+                    <pre id="deep_raw"></pre>
+                </details>
+            </div>
+        </div>
+
+        <!-- Debug Tab -->
+        <div id="debug" class="tab-content">
+            <div class="card">
+                <h2>Raw 10-K HTML Fetcher</h2>
+                <p style="color:var(--muted-color); margin-bottom: 1rem;">Directly fetch the latest 10-K HTML for
+                    debugging ingestion logic.</p>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <input type="text" id="debug_ticker" value="NVDA" placeholder="Ticker">
+                    </div>
+                    <div class="form-group">
+                        <button class="action-btn btn-gray" style="margin-top:0" onclick="fetchRawHtml()">Fetch
+                            HTML</button>
+                    </div>
+                </div>
+                <div id="debug_result" style="display:none;">
+                    <h3 id="debug_status">Status: ...</h3>
+                    <details open>
+                        <summary>HTML Preview (First 2000 chars)</summary>
+                        <pre id="debug_html_preview"></pre>
+                    </details>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script>
-        async function analyze() {
-            await runAnalysis('/ask', {
-                ticker: document.getElementById('ticker').value.toUpperCase(),
-                question: document.getElementById('question').value,
-                use_ai: document.getElementById('use_ai').checked
-            }, 'financial');
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+
+            // Highlight button
+            const btn = Array.from(document.querySelectorAll('.nav-btn')).find(b => b.textContent.toLowerCase().includes(tabId === 'quick' ? 'quick' : tabId === 'deep' ? 'deep' : 'debug'));
+            if (btn) btn.classList.add('active');
         }
 
-        async function analyze10k() {
-            await runAnalysis('/sec/10k/analyze', {
-                ticker: document.getElementById('ticker').value.toUpperCase(),
-                focus: "overview",
-                use_ai: document.getElementById('use_ai').checked
-            }, '10k');
-        }
+        async function runQuickAnalysis() {
+            const resultDiv = document.getElementById('quick_result');
+            const btn = document.querySelector('#quick button');
 
-        async function runAnalysis(endpoint, payload, type) {
-            const btn1 = document.getElementById('analyzeBtn');
-            const btn2 = document.getElementById('analyze10kBtn');
-            const resultDiv = document.getElementById('result');
-            const statusBadge = document.getElementById('statusBadge');
-            const execSummary = document.getElementById('execSummary');
-            const risksDiv = document.getElementById('risks');
-
-            btn1.disabled = true;
-            btn2.disabled = true;
+            btn.disabled = true;
+            btn.textContent = "Analyzing...";
             resultDiv.style.display = 'none';
 
             try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s for 10-K
-
-                const res = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
-                    signal: controller.signal
+                const res = await POST('/ask', {
+                    ticker: document.getElementById('quick_ticker').value.toUpperCase(),
+                    question: document.getElementById('quick_question').value,
+                    use_ai: document.getElementById('quick_use_ai').checked
                 });
-                clearTimeout(timeoutId);
 
-                const data = await res.json();
                 resultDiv.style.display = 'block';
-                document.getElementById('rawJson').textContent = JSON.stringify(data, null, 2);
+                document.getElementById('quick_raw').textContent = JSON.stringify(res, null, 2);
 
-                if (res.status === 200) {
-
-                    if (type === 'financial') {
-                        // Standard handling
-                        let aiMsg = data.ai_used ? "Analysis Complete" : "AI Temporarily Unavailable (metrics only)";
-                        statusBadge.className = data.ai_used ? "status-badge status-success" : "status-badge status-warning";
-                        statusBadge.textContent = aiMsg;
-
-                        const answer = data.answer || {};
-                        execSummary.textContent = answer["Executive Summary"] || "N/A";
-                        risksDiv.textContent = answer["Risks"] || "N/A";
-
-                    } else {
-                        // 10K Handling
-                        let aiMsg = data.ai_used ? "Full 10-K AI Analysis Complete" : "AI Unavailable";
-                        statusBadge.className = data.ai_used ? "status-badge status-success" : "status-badge status-warning";
-                        statusBadge.textContent = aiMsg;
-
-                        const analysis = data.analysis || {};
-                        execSummary.textContent = analysis.executive_summary || "N/A";
-
-                        // Format Lists
-                        let html = "";
-                        if (analysis.key_points && analysis.key_points.length) {
-                            html += "<strong>Key Points:</strong><ul>" + analysis.key_points.map(x => `<li>${x}</li>`).join('') + "</ul>";
-                        }
-                        if (analysis.risks && analysis.risks.length) {
-                            html += "<strong>Risks:</strong><ul>" + analysis.risks.map(x => `<li>${x}</li>`).join('') + "</ul>";
-                        }
-                        if (analysis.financial_drivers && analysis.financial_drivers.length) {
-                            html += "<strong>Drivers:</strong><ul>" + analysis.financial_drivers.map(x => `<li>${x}</li>`).join('') + "</ul>";
-                        }
-                        risksDiv.innerHTML = html || "No details available.";
-                    }
-
+                // Banner
+                const banner = document.getElementById('quick_status');
+                if (!res.ai_used && document.getElementById('quick_use_ai').checked) {
+                    banner.style.display = 'flex';
+                    banner.textContent = "⚠ AI Unavailable (Quota/Error). Metrics only.";
                 } else {
-                    throw new Error(data.detail || `Server Error: ${res.status}`);
+                    banner.style.display = 'none';
                 }
 
-            } catch (err) {
-                resultDiv.style.display = 'block';
-                statusBadge.textContent = `Error: ${err.message}`;
-                statusBadge.className = "status-badge status-error";
-                execSummary.textContent = "Failed.";
-                risksDiv.textContent = "";
+                // Content
+                const ex = res.answer?.['Executive Summary'] || "N/A";
+                const risks = res.answer?.['Risks'] || "N/A";
+                document.getElementById('quick_summary').textContent = ex;
+                document.getElementById('quick_risks').textContent = risks;
+
+            } catch (e) {
+                alert("Error: " + e.message);
             } finally {
-                btn1.disabled = false;
-                btn2.disabled = false;
+                btn.disabled = false;
+                btn.textContent = "Analyze Financials";
+            }
+        }
+
+        async function runDeepAnalysis() {
+            const resultDiv = document.getElementById('deep_result');
+            const btn = document.querySelector('#deep button');
+
+            btn.disabled = true;
+            btn.textContent = "Fetching & Analyzing 10-K (may take 30s)...";
+            resultDiv.style.display = 'none';
+
+            try {
+                const res = await POST('/sec/10k/analyze', {
+                    ticker: document.getElementById('deep_ticker').value.toUpperCase(),
+                    focus: document.getElementById('deep_focus').value,
+                    use_ai: document.getElementById('deep_use_ai').checked
+                });
+
+                resultDiv.style.display = 'block';
+                document.getElementById('deep_raw').textContent = JSON.stringify(res, null, 2);
+
+                // Meta
+                const metaHtml = `
+                    <div class="meta-item"><strong>Ticker</strong> ${res.ticker}</div>
+                    <div class="meta-item"><strong>CIK</strong> ${res.cik}</div>
+                    <div class="meta-item"><strong>Filing Date</strong> ${res.filing_date || '-'}</div>
+                    <div class="meta-item"><strong>Focus</strong> <span style="text-transform:capitalize">${res.focus}</span></div>
+                    <div class="meta-item"><strong>AI Used</strong> 
+                        <span class="badge ${res.ai_used ? 'badge-success' : 'badge-fail'}">${res.ai_used ? 'YES' : 'NO'}</span>
+                    </div>
+                `;
+                document.getElementById('deep_meta').innerHTML = metaHtml;
+
+                // Warning Check
+                const aiUnavailable = !res.ai_used;
+                const warnDiv = document.getElementById('deep_warning');
+                if (aiUnavailable) {
+                    warnDiv.style.display = 'flex';
+                    warnDiv.textContent = "⚠ AI Analysis Unavailable. Displaying metadata and fallback info only.";
+                } else {
+                    warnDiv.style.display = 'none';
+                }
+
+                // Parse Analysis
+                const an = res.analysis || {};
+                setText('an_summary', an.executive_summary);
+                setList('an_points', an.key_points);
+                setList('an_risks', an.risks);
+                setList('an_drivers', an.financial_drivers);
+                setList('an_watch', an.what_to_watch);
+
+            } catch (e) {
+                alert("Error: " + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Analyze Latest 10-K";
+            }
+        }
+
+        async function fetchRawHtml() {
+            const btn = document.querySelector('#debug button');
+            const resultDiv = document.getElementById('debug_result');
+            const ticker = document.getElementById('debug_ticker').value;
+
+            btn.disabled = true;
+            btn.textContent = "Fetching...";
+            resultDiv.style.display = 'none';
+
+            try {
+                const res = await fetch(`/sec/10k/latest?ticker=${ticker}`);
+                if (res.status !== 200) throw new Error("Status " + res.status);
+                const data = await res.json();
+
+                resultDiv.style.display = 'block';
+                document.getElementById('debug_status').textContent = `Success: ${data.accession} (${data.filing_date})`;
+                document.getElementById('debug_html_preview').textContent = (data.html || "").substring(0, 2000) + "...";
+            } catch (e) {
+                alert("Fetch Failed: " + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Fetch HTML";
+            }
+        }
+
+        // Helpers
+        async function POST(url, body) {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), 90000); // 90s timeout
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                    signal: controller.signal
+                });
+                clearTimeout(id);
+                const json = await res.json();
+                if (!res.ok) throw new Error(json.detail || json.error || "Server Error " + res.status);
+                return json;
+            } catch (e) {
+                clearTimeout(id);
+                throw e;
+            }
+        }
+
+        function setText(id, text) {
+            const el = document.getElementById(id);
+            if (!text) { el.textContent = "N/A"; return; }
+            el.textContent = text;
+        }
+
+        function setList(id, items) {
+            const el = document.getElementById(id);
+            if (!items || items.length === 0) { el.textContent = "None provided."; return; }
+
+            if (Array.isArray(items)) {
+                let html = "<ul>";
+                items.forEach(i => html += `<li>${i}</li>`);
+                html += "</ul>";
+                el.innerHTML = html;
+            } else {
+                el.textContent = JSON.stringify(items);
             }
         }
     </script>

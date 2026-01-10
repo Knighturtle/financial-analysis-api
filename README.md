@@ -106,10 +106,19 @@ curl -X POST "http://127.0.0.1:8000/sec/10k/analyze" \
 
 ## Web UI Access
 
-The project includes a user-friendly Web UI.
+The project includes a user-friendly Web UI with two main modes:
+
+1. **Quick Metrics**: Standard financial analysis (Revenue, Margins, Forecast).
+2. **Deep 10-K Research**: AI-powered analysis of the latest SEC 10-K filing.
+
+### How to Use
+
+1. Start the server: `python -m uvicorn api.main:app --reload`
+2. Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/) in your browser.
+3. Switch tabs to choose your analysis mode.
+4. Enter a Ticker (e.g. NVDA) and click Analyze.
 
 - **Home / Dashboard**: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
-- **Demo Page** (Redirects to Home): [http://127.0.0.1:8000/demo](http://127.0.0.1:8000/demo)
 - **API Documentation**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
 > **Note**: If `use_ai` is enabled but the OpenAI Quota is exceeded, the generic fallback response will be shown. You can uncheck "Use AI Analysis" in the UI to perform a metrics-only analysis.
