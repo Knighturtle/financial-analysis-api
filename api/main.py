@@ -66,6 +66,58 @@ class AskResponse(BaseModel):
     answer: Dict[str, str]
     warnings: List[str]
 
+class AnalyzeRequest(BaseModel):
+    ticker: str
+    focus: str = "overview"
+    use_ai: bool = True
+    max_chars: int = 60000
+
+@app.post("/sec/10k/analyze")
+async def analyze_10k_endpoint(req: AnalyzeRequest):
+    # 1. Fetch 10-K
+    fetch_res = sec_service.get_latest_10k(req.ticker)
+    if fetch_res["status"] != 200:
+         return {
+             "error": fetch_res.get("error", "Fetch failed"), 
+             "warnings": [fetch_res.get("error")]
+         }
+    
+    sec_data = fetch_res["data"]
+    
+    # 2. Analyze
+    ai_used = False
+    analysis = {}
+    
+    if req.use_ai:
+        # Run in threadpool
+        analysis = await asyncio.to_thread(
+            ai_analyst.analyze_10k_content,
+            ticker=req.ticker,
+            html_content=sec_data["html"],
+            focus=req.focus,
+            max_chars=req.max_chars
+        )
+        if analysis.get("executive_summary") != "AI Analysis Unavailable (Quota exceeded or Key missing).":
+            ai_used = True
+    else:
+        # User opted out
+        analysis = {
+            "executive_summary": "AI Analysis Disabled by User.",
+            "key_points": [], "risks": [], "financial_drivers": [], "what_to_watch": []
+        }
+
+    return {
+        "ticker": req.ticker,
+        "cik": sec_data["cik"],
+        "filing_date": sec_data.get("filing_date"),
+        "report_date": sec_data.get("report_date"),
+        "accession": sec_data.get("accession"),
+        "focus": req.focus,
+        "ai_used": ai_used,
+        "analysis": analysis,
+        "warnings": ["LLM output is informational only."] if ai_used else []
+    }
+
 @app.on_event("startup")
 async def startup_event():
     print("INFO: Server starting up. Environment loaded.")

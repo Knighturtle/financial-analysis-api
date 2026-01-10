@@ -134,4 +134,79 @@ class AIAnalyst:
             raise e # Raise to allow upstream handling (api/main.py)
 
 
-    # Fallback response method removed as per strict AI requirements.
+    def analyze_10k_content(self, ticker: str, html_content: str, focus: str = "overview", max_chars: int = 60000) -> Dict[str, Any]:
+        """
+        Analyzes raw 10-K HTML content.
+        returns: Dict with keys matching the requested JSON schema.
+        """
+        # 1. Clean HTML
+        try:
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(html_content, "lxml")
+            for script in soup(["script", "style"]):
+                script.extract()
+            text_content = soup.get_text(separator="\n")
+            # Normalize whitespace
+            lines = (line.strip() for line in text_content.splitlines())
+            text_content = '\n'.join(chunk for chunk in lines if chunk)
+        except Exception as e:
+            text_content = html_content # Fallback to raw if soup fails?
+            print(f"HTML parsing failed: {e}")
+
+        # 2. Truncate
+        if len(text_content) > max_chars:
+            text_content = text_content[:max_chars] + "...[TRUNCATED]"
+
+        # 3. Construct Prompt
+        # Simplified for robustness
+        system_prompt = """
+        You are a financial analyst. Analyze the provided SEC 10-K text.
+        Return ONLY valid JSON. No Markdown.
+        JSON format:
+        {
+             "executive_summary": "Summary (200 chars)",
+             "key_points": ["bullet 1", "bullet 2"],
+             "risks": ["risk 1", "risk 2"],
+             "financial_drivers": ["driver 1", "driver 2"],
+             "what_to_watch": ["item 1", "item 2"]
+        }
+        """
+        
+        user_prompt = f"""
+        Ticker: {ticker}
+        Focus: {focus}
+        
+        10-K Text (excerpt):
+        {text_content}
+        """
+
+        fallback_result = {
+            "executive_summary": "AI Analysis Unavailable (Quota exceeded or Key missing).",
+            "key_points": [],
+            "risks": [],
+            "financial_drivers": [],
+            "what_to_watch": []
+        }
+
+        if not self.client:
+             return fallback_result
+
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.3,
+                timeout=45.0
+            )
+            content = response.choices[0].message.content.strip()
+            # Clean possible markdown
+            if content.startswith("```json"): content = content[7:]
+            if content.endswith("```"): content = content[:-3]
+            return json.loads(content.strip())
+
+        except Exception as e:
+            print(f"10-K AI Analysis Failed: {e}")
+            return fallback_result

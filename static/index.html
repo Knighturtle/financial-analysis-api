@@ -159,7 +159,11 @@
                     Use AI Analysis
                 </label>
             </div>
-            <button id="analyzeBtn" onclick="analyze()">Analyze</button>
+            <div id="btnGroup" style="display: flex; gap: 1rem;">
+                <button id="analyzeBtn" onclick="analyze()">Analyze Financials (Metrics)</button>
+                <button id="analyze10kBtn" onclick="analyze10k()" style="background-color: #7c3aed;">Analyze Full 10-K
+                    (AI)</button>
+            </div>
         </div>
 
         <div id="result" class="result-section">
@@ -169,8 +173,8 @@
                 <div id="aiContent" class="output-box">
                     <h3>Executive Summary</h3>
                     <p id="execSummary">Loading...</p>
-                    <h3>Risks</h3>
-                    <p id="risks">Loading...</p>
+                    <h3>Risks / Key Points</h3>
+                    <div id="risks">Loading...</div>
                 </div>
 
                 <details style="margin-top: 1rem;">
@@ -183,26 +187,38 @@
 
     <script>
         async function analyze() {
-            const btn = document.getElementById('analyzeBtn');
-            const resultDiv = document.getElementById('result');
-            const statusBadge = document.getElementById('statusBadge');
-
-            btn.disabled = true;
-            btn.textContent = "Analyzing...";
-            resultDiv.style.display = 'none';
-
-            const payload = {
+            await runAnalysis('/ask', {
                 ticker: document.getElementById('ticker').value.toUpperCase(),
                 question: document.getElementById('question').value,
                 use_ai: document.getElementById('use_ai').checked
-            };
+            }, 'financial');
+        }
+
+        async function analyze10k() {
+            await runAnalysis('/sec/10k/analyze', {
+                ticker: document.getElementById('ticker').value.toUpperCase(),
+                focus: "overview",
+                use_ai: document.getElementById('use_ai').checked
+            }, '10k');
+        }
+
+        async function runAnalysis(endpoint, payload, type) {
+            const btn1 = document.getElementById('analyzeBtn');
+            const btn2 = document.getElementById('analyze10kBtn');
+            const resultDiv = document.getElementById('result');
+            const statusBadge = document.getElementById('statusBadge');
+            const execSummary = document.getElementById('execSummary');
+            const risksDiv = document.getElementById('risks');
+
+            btn1.disabled = true;
+            btn2.disabled = true;
+            resultDiv.style.display = 'none';
 
             try {
-                // Client-side timeout (15s)
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 15000);
+                const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s for 10-K
 
-                const res = await fetch('/ask', {
+                const res = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload),
@@ -215,20 +231,39 @@
                 document.getElementById('rawJson').textContent = JSON.stringify(data, null, 2);
 
                 if (res.status === 200) {
-                    let aiMsg = "Analysis Complete";
-                    let badgeClass = "status-success";
 
-                    if (!data.ai_used) {
-                        aiMsg = "AI Temporarily Unavailable (Quota/Error) - Showing Metrics Only";
-                        badgeClass = "status-warning";
+                    if (type === 'financial') {
+                        // Standard handling
+                        let aiMsg = data.ai_used ? "Analysis Complete" : "AI Temporarily Unavailable (metrics only)";
+                        statusBadge.className = data.ai_used ? "status-badge status-success" : "status-badge status-warning";
+                        statusBadge.textContent = aiMsg;
+
+                        const answer = data.answer || {};
+                        execSummary.textContent = answer["Executive Summary"] || "N/A";
+                        risksDiv.textContent = answer["Risks"] || "N/A";
+
+                    } else {
+                        // 10K Handling
+                        let aiMsg = data.ai_used ? "Full 10-K AI Analysis Complete" : "AI Unavailable";
+                        statusBadge.className = data.ai_used ? "status-badge status-success" : "status-badge status-warning";
+                        statusBadge.textContent = aiMsg;
+
+                        const analysis = data.analysis || {};
+                        execSummary.textContent = analysis.executive_summary || "N/A";
+
+                        // Format Lists
+                        let html = "";
+                        if (analysis.key_points && analysis.key_points.length) {
+                            html += "<strong>Key Points:</strong><ul>" + analysis.key_points.map(x => `<li>${x}</li>`).join('') + "</ul>";
+                        }
+                        if (analysis.risks && analysis.risks.length) {
+                            html += "<strong>Risks:</strong><ul>" + analysis.risks.map(x => `<li>${x}</li>`).join('') + "</ul>";
+                        }
+                        if (analysis.financial_drivers && analysis.financial_drivers.length) {
+                            html += "<strong>Drivers:</strong><ul>" + analysis.financial_drivers.map(x => `<li>${x}</li>`).join('') + "</ul>";
+                        }
+                        risksDiv.innerHTML = html || "No details available.";
                     }
-
-                    statusBadge.textContent = aiMsg;
-                    statusBadge.className = `status-badge ${badgeClass}`;
-
-                    const answer = data.answer || {};
-                    document.getElementById('execSummary').textContent = answer["Executive Summary"] || "N/A";
-                    document.getElementById('risks').textContent = answer["Risks"] || "N/A";
 
                 } else {
                     throw new Error(data.detail || `Server Error: ${res.status}`);
@@ -236,13 +271,13 @@
 
             } catch (err) {
                 resultDiv.style.display = 'block';
-                statusBadge.textContent = err.name === 'AbortError' ? "Timeout (15s limit)" : `Error: ${err.message}`;
+                statusBadge.textContent = `Error: ${err.message}`;
                 statusBadge.className = "status-badge status-error";
-                document.getElementById('execSummary').textContent = "Failed to retrieve analysis.";
-                document.getElementById('risks').textContent = "";
+                execSummary.textContent = "Failed.";
+                risksDiv.textContent = "";
             } finally {
-                btn.disabled = false;
-                btn.textContent = "Analyze";
+                btn1.disabled = false;
+                btn2.disabled = false;
             }
         }
     </script>

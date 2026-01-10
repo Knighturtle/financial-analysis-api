@@ -80,6 +80,30 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/sec/10k/latest?ticker=NVDA"
 curl "http://127.0.0.1:8000/sec/10k/latest?ticker=NVDA"
 ```
 
+### Analyze Latest 10-K (/sec/10k/analyze)
+
+Performs AI-driven analysis on the latest 10-K filing.
+
+**PowerShell Example**:
+
+```powershell
+$body = @{
+  ticker   = "NVDA"
+  focus    = "overview"
+  use_ai   = $true
+} | ConvertTo-Json
+
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/sec/10k/analyze" -ContentType "application/json" -Body $body
+```
+
+**Curl Example**:
+
+```bash
+curl -X POST "http://127.0.0.1:8000/sec/10k/analyze" \
+     -H "Content-Type: application/json" \
+     -d '{"ticker": "NVDA", "focus": "overview", "use_ai": true}'
+```
+
 ## Web UI Access
 
 The project includes a user-friendly Web UI.
