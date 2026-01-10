@@ -1,4 +1,5 @@
 import pandas as pd
+import pandas as pd
 import numpy as np
 from typing import Dict, Any, Optional
 
@@ -8,10 +9,10 @@ class Forecaster:
         Generates a simple linear revenue forecast for the next 3 years.
         Returns None if insufficient data.
         """
-        if "history" not in metrics_data or not metrics_data["history"]:
-            return None
-
         try:
+            if "history" not in metrics_data or not metrics_data["history"]:
+                return None
+
             df = pd.DataFrame(metrics_data["history"])
             
             # Identify Revenue column
@@ -33,7 +34,10 @@ class Forecaster:
             
             y = df[rev_col].values
             
-            # Simple fit
+            # Safe polyfit
+            if len(X) != len(y) or len(X) < 2:
+                 return None
+
             slope, intercept = np.polyfit(X, y, 1)
             
             # Next 3 years
@@ -49,5 +53,5 @@ class Forecaster:
             }
             
         except Exception:
-            # Never raise, just return None
+            # Safely return None on any math/logic error
             return None

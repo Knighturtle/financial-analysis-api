@@ -1,3 +1,4 @@
+
 import os
 import json
 import time
@@ -54,47 +55,51 @@ class SECIngestor:
     def _get_cik(self, ticker: str) -> Optional[str]:
         """
         Resolves Ticker -> CIK.
-        Uses local cache `company_tickers.json` if available, else fetches from SEC.
+        Prioritizes local `company_tickers.json` to prevent unnecessary SEC calls.
         """
         ticker = ticker.upper()
         
-        # Check cache freshness (e.g. 1 day) - simpler: just load if exists
-        tickers_map = {}
+        # 1. Try Cache First (Always)
         if os.path.exists(self.tickers_json_path):
             try:
                 with open(self.tickers_json_path, 'r', encoding='utf-8') as f:
                     tickers_map = json.load(f)
-            except:
-                pass
-        
-        # Look up in cache
-        # Structure of company_tickers.json from SEC is { "0": {"cik_str": 320193, "ticker": "AAPL", "title": "Apple Inc."}, ... }
-        # Transform to { "AAPL": 320193, ... } for easier lookup if needed, or just iterate.
-        # But for efficiency let's see if we can find it.
-        
-        cik = None
-        # Quick search in cached map structure
-        # If map is raw SEC format dict of dicts
-        for _, val in tickers_map.items():
-            if val.get("ticker") == ticker:
-                return str(val.get("cik_str")).zfill(10)
-
-        # If not found or no cache, fetch
-        print(f"Fetching company_tickers.json for {ticker}...")
-        try:
-            resp = self._requests_get("https://www.sec.gov/files/company_tickers.json")
-            if resp.status_code == 200:
-                raw_data = resp.json()
-                # Save to cache
-                with open(self.tickers_json_path, 'w', encoding='utf-8') as f:
-                    json.dump(raw_data, f)
-                
-                # Search again
-                for _, val in raw_data.items():
+                    
+                # Search in cache
+                for _, val in tickers_map.items():
                     if val.get("ticker") == ticker:
                         return str(val.get("cik_str")).zfill(10)
-        except Exception as e:
-            print(f"Error fetching tickers: {e}")
+            except Exception as e:
+                print(f"Cache read error: {e}")
+        
+        # 2. If not found, Fetch Fresh
+        print(f"Fetching company_tickers.json for {ticker} from SEC...")
+        retries = 3
+        backoff = 2.0
+        
+        for i in range(retries):
+            try:
+                resp = self._requests_get("https://www.sec.gov/files/company_tickers.json")
+                if resp.status_code == 200:
+                    raw_data = resp.json()
+                    # Save to cache
+                    with open(self.tickers_json_path, 'w', encoding='utf-8') as f:
+                        json.dump(raw_data, f)
+                    
+                    # Search again
+                    for _, val in raw_data.items():
+                        if val.get("ticker") == ticker:
+                            return str(val.get("cik_str")).zfill(10)
+                    # If we downloaded but didn't find it, break and return None (invalid ticker?)
+                    break
+                else:
+                    print(f"Attempt {i+1} failed with status {resp.status_code}")
+                    time.sleep(backoff)
+                    backoff *= 2
+            except Exception as e:
+                print(f"Error fetching tickers (Attempt {i+1}): {e}")
+                time.sleep(backoff)
+                backoff *= 2
             
         return None
 
@@ -146,96 +151,86 @@ class SECIngestor:
         form_type = None
         report_date = None
 
-        # Iterate safely
+        # Iterate to find a valid 10-K/20-F with sufficient text
+        # Limit to recent 3 filings to avoid indefinite scanning
+        
+        found_text = None
+        found_meta = None
+        
         count = len(filings.get("accessionNumber", []))
-        for i in range(count):
+        # Scan up to 5 recent filings
+        scan_limit = min(count, 5)
+        
+        for i in range(scan_limit):
             form = filings["form"][i]
             if form in ["10-K", "20-F", "40-F"]:
                 accession_number = filings["accessionNumber"][i]
-                primary_document = filings["primaryDocument"][i] # Usually exact filename
+                primary_document = filings["primaryDocument"][i]
                 form_type = form
                 report_date = filings["reportDate"][i]
-                break
-        
-        if not accession_number:
-             return {"status": "not_found", "sec_text": "", "warnings": ["No 10-K/20-F/40-F found in recent filings."]}
+                
+                # Try to process this filing
+                clean_accession = accession_number.replace("-", "")
+                cache_text_filename = f"{ticker}_{clean_accession}.txt"
+                cache_text_path = os.path.join(self.sec_text_dir, cache_text_filename)
+                
+                # Check cache first
+                text_content = ""
+                if os.path.exists(cache_text_path):
+                     try:
+                        with open(cache_text_path, "r", encoding="utf-8") as f:
+                            text_content = f.read()
+                     except:
+                        pass
+                
+                # If not cached or empty, fetch
+                if not text_content or len(text_content) < 100:
+                    doc_url = f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{clean_accession}/{primary_document}"
+                    print(f"Fetching 10-K from {doc_url}...")
+                    try:
+                        resp = self._requests_get(doc_url)
+                        if resp.status_code == 200:
+                            soup = BeautifulSoup(resp.content, "lxml")
+                            for script in soup(["script", "style"]):
+                                script.extract()
+                            raw_text = soup.get_text(separator="\n")
+                            # Normalize
+                            lines = (line.strip() for line in raw_text.splitlines())
+                            chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+                            text_content = '\n'.join(chunk for chunk in chunks if chunk)
+                            
+                            # Cache it
+                            with open(cache_text_path, "w", encoding="utf-8") as f:
+                                f.write(text_content)
+                    except Exception as e:
+                        print(f"Failed to fetch filing {accession_number}: {e}")
+                        continue
 
-        # Check Cache
-        clean_accession = accession_number.replace("-", "")
-        # SEC uses formatted accession in URL, but dashed in JSON usually (or vice versa).
-        # JSON has dashed: 0000320193-23-000106
-        # URL needs dashed: data/320193/000032019323000106/ (No, URL uses dashed usually if accessing archives generic, 
-        # BUT for index.json lookup it is different. 
-        # Standard URL: https://www.sec.gov/Archives/edgar/data/{cik}/{clean_accession}/{primary_doc}  <-- Note: clean accession (no dashes)
-        
-        cache_text_filename = f"{ticker}_{clean_accession}.txt"
-        cache_text_path = os.path.join(self.sec_text_dir, cache_text_filename)
-        
-        if os.path.exists(cache_text_path):
-            try:
-                with open(cache_text_path, "r", encoding="utf-8") as f:
-                    return {
-                        "status": "success",
-                        "source": "cache",
-                        "sec_text": f.read(),
-                        "warnings": []
+                # Validate content length
+                if len(text_content) > 1000:
+                    found_text = text_content
+                    found_meta = {
+                        "ticker": ticker,
+                        "cik": cik,
+                        "accession": accession_number,
+                        "form": form_type,
+                        "date": report_date,
+                        "url": f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{clean_accession}/{primary_document}"
                     }
-            except:
-                pass # Proceed to fetch
+                    # Save meta
+                    meta_path = os.path.join(self.sec_cache_dir, f"{ticker}_{clean_accession}.json")
+                    with open(meta_path, "w", encoding="utf-8") as f:
+                        json.dump(found_meta, f)
+                    break # Success
+                else:
+                    print(f"Filing {accession_number} text too short ({len(text_content)} chars). Trying next...")
 
-        # Fetch HTML
-        # URL Construction
-        # https://www.sec.gov/Archives/edgar/data/{cik}/{clean_accession}/{primary_document}
-        # Note: primaryDocument from submissions json usually works directly.
-        
-        doc_url = f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{clean_accession}/{primary_document}"
-        
-        try:
-            resp = self._requests_get(doc_url)
-            if resp.status_code != 200:
-                return {"status": "error", "sec_text": "", "warnings": [f"Failed to download filing HTML. Status: {resp.status_code}"]}
-            
-            html_content = resp.content
-            
-            # Parse HTML to Text
-            soup = BeautifulSoup(html_content, "lxml")
-            
-            # Simple cleanup
-            for script in soup(["script", "style"]):
-                script.extract()
-            
-            text = soup.get_text(separator="\n")
-            
-            # Normalize whitespace
-            lines = (line.strip() for line in text.splitlines())
-            chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-            clean_text = '\n'.join(chunk for chunk in chunks if chunk)
-            
-            # Limit size (e.g. 50k chars for AI context fitting optimization, or keep full locally)
-            # Let's keep full locally, but return truncated if needed? 
-            # Requirement says "save to UTF-8", "return text to ai_analysis"
-            
-            with open(cache_text_path, "w", encoding="utf-8") as f:
-                f.write(clean_text)
-            
-            # Save Metadata
-            meta_path = os.path.join(self.sec_cache_dir, f"{ticker}_{clean_accession}.json")
-            with open(meta_path, "w", encoding="utf-8") as f:
-                json.dump({
-                    "ticker": ticker,
-                    "cik": cik,
-                    "accession": accession_number,
-                    "form": form_type,
-                    "date": report_date,
-                    "url": doc_url
-                }, f)
+        if not found_text:
+             return {"status": "error", "sec_text": "", "warnings": ["Could not retrieve valid 10-K text (too short or missing)."]}
 
-            return {
-                "status": "success",
-                "source": "live_sec",
-                "sec_text": clean_text[:20000], # Return first 20k chars for analysis to avoid huge payloads internally
-                "warnings": []
-            }
-            
-        except Exception as e:
-            return {"status": "error", "sec_text": "", "warnings": [f"Error processing filing: {str(e)}"]}
+        return {
+            "status": "success",
+            "source": "live_sec",
+            "sec_text": found_text[:50000], 
+            "warnings": []
+        }

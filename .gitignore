@@ -1,8 +1,32 @@
-﻿.venv/
+# Python
 __pycache__/
-.ipynb_checkpoints/
-.DS_Store
 *.pyc
 *.pyo
 *.pyd
+
+# venv
+.venv/
+venv/
+.env/
 .env
+
+# Logs
+*.log
+*.err
+
+# OS/Editor
+.DS_Store
+.vscode/
+
+# Data / cache
+data/sec_cache/
+data/sec_text/
+data/*.csv
+
+# Web
+web/node_modules/
+web/.next/
+web/.env*.local
+
+# notebooks
+*.ipynb_checkpoints/

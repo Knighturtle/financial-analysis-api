@@ -1,5 +1,6 @@
 import os
 import json
+import time
 from typing import Dict, Any
 from openai import OpenAI
 
@@ -32,73 +33,105 @@ class AIAnalyst:
             forecast_txt = f"Next Year Projected Revenue: ${next_rev:.2f}B"
 
         if self.client and self.api_key:
-            try:
-                return self._call_openai(ticker, question, data_summary, forecast_txt, sec_text)
-            except Exception as e:
-                print(f"AI Error: {e}")
-                return self._fallback_response(ticker, data_summary, forecast_txt)
+            max_retries = 3
+            backoff = 1
+            last_error = None
+            
+            for attempt in range(max_retries):
+                try:
+                    result = self._call_openai(ticker, question, data_summary, forecast_txt, sec_text)
+                    # Simple validation: checks if we got meaningful keys
+                    if result and result.get("executive_summary") and len(result["executive_summary"]) > 20:
+                        return result
+                    else:
+                        print(f"AI Response validation failed (Attempt {attempt+1}). Retrying...")
+                        time.sleep(backoff)
+                        backoff *= 2
+                except Exception as e:
+                    print(f"AI Error (Attempt {attempt+1}): {e}")
+                    last_error = e
+                    time.sleep(backoff)
+                    backoff *= 2
+            
+            # If we get here, all retries failed
+            raise ValueError(f"AI Analysis failed after {max_retries} attempts: {last_error or 'Invalid response'}")
         else:
-            return self._fallback_response(ticker, data_summary, forecast_txt)
+             # Should not happen if api/main.py checks, but strict error here too
+            raise ValueError("OpenAI API Key not set.")
 
     def _call_openai(self, ticker, question, data, forecast, sec_text):
         system_prompt = """
-        You are a senior financial analyst. 
-        Analyze the company based on the provided metrics and SEC 10-K excerpt.
-        Respond in Japanese.
-        Strictly follow this JSON format for the 'answer' field logic, but return the whole response as valid JSON matching the API spec if needed, 
-        OR just return the text parts.
-        Actually, the API expects a structure.
+        あなたは熟練した財務アナリストです。
+        提供された財務指標とSECの10-K抜粋に基づいて、企業の分析を行ってください。
         
-        Output format should be a JSON string with these keys:
-        - executive_summary
-        - key_metrics_commentary
-        - risks_summary
-        - growth_drivers
-        - red_flags
+        【重要】
+        - **日本語**で回答してください。
+        - 以下のJSONフォーマットを厳守してください。
+        - **Markdown形式（```jsonなど）は絶対に含めないでください。** 純粋なJSON文字列のみを返してください。
         
-        Do not include markdown formatting like ```json. Just raw valid JSON.
+        {
+            "executive_summary": "全体的な評価と要約（200文字程度）",
+            "key_metrics_commentary": "主要な財務指標に基づいた分析（収益性、成長性など）",
+            "risks_summary": "SEC抜粋や財務状況から読み取れるリスク要因",
+            "growth_drivers": "今後の成長を牽引する要素",
+            "red_flags": "懸念点や注意すべき兆候（なければ'特になし'）"
+        }
         """
+        
+        # Handle case where sec_text is short or empty
+        sec_context = sec_text[:4000] if sec_text and len(sec_text) > 100 else "SEC詳細情報なし（財務数値のみで分析してください）"
         
         user_prompt = f"""
-        Ticker: {ticker}
-        Question: {question}
-        Data: {data}
-        Forecast: {forecast}
-        SEC Text Excerpt: {sec_text[:2000]}
+        対象企業: {ticker}
+        質問: {question}
         
-        Generate the analysis.
+        【財務データ】
+        {data}
+        
+        【予測値】
+        {forecast}
+        
+        【SEC 10-K 抜粋】
+        {sec_context}
+        
+        上記情報を統合し、客観的かつ洞察に富んだ分析を作成してください。
         """
         
-        response = self.client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            temperature=0.7
-        )
-        
-        content = response.choices[0].message.content
-        # Try to parse JSON, if fails, wrap text
         try:
-            return json.loads(content)
-        except:
-            return {
-                "executive_summary": content[:200],
-                "key_metrics_commentary": "Parsing error, see summary.",
-                "risks_summary": "Parsing error.",
-                "growth_drivers": "Parsing error.",
-                "red_flags": "Parsing error."
-            }
+            # Enforcing 30s timeout per call
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.5,
+                timeout=30.0 
+            )
+            
+            content = response.choices[0].message.content.strip()
+            
+            # Remove markdown code blocks if present
+            if content.startswith("```json"):
+                content = content[7:]
+            if content.endswith("```"):
+                content = content[:-3]
+            content = content.strip()
 
-    def _fallback_response(self, ticker, data, forecast):
-        """
-        Rule-based fallback response in Japanese.
-        """
-        return {
-            "executive_summary": f"{ticker}の財務分析概要です。直近の売上高は約${data.split(',')[0].split('$')[1]}、純利益率は{data.split('Net Margin: ')[1].split(',')[0]}です。",
-            "key_metrics_commentary": f"主要指標: {data}。安定した収益基盤があるか確認が必要です。",
-            "risks_summary": "10-Kに基づく具体的なリスク要因はAI機能が無効なため生成できませんが、一般的にマクロ経済、競合、規制リスクに注意が必要です。",
-            "growth_drivers": f"過去の成長率(CAGR)は{data.split('CAGR: ')[1]}です。今後の成長は市場拡大と新製品に依存します。",
-            "red_flags": "財務データ上の大きな異常値は簡易チェックでは検出されませんでしたが、キャッシュフローの推移を詳細に確認することを推奨します。"
-        }
+            return json.loads(content)
+            
+        except json.JSONDecodeError:
+            print(f"JSON Parse Error. Content: {content[:100]}...")
+            return {
+                "executive_summary": "分析は生成されましたが、フォーマット変換に失敗しました。",
+                "key_metrics_commentary": content[:300] + "...", 
+                "risks_summary": "フォーマットエラー",
+                "growth_drivers": "フォーマットエラー",
+                "red_flags": "フォーマットエラー"
+            }
+        except Exception as e:
+            print(f"OpenAI API Error: {e}")
+            raise e # Raise to allow upstream handling (api/main.py)
+
+
+    # Fallback response method removed as per strict AI requirements.

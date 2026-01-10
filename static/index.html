@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Analysis API</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f1f5f9;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #22c55e;
+            --warning: #eab308;
+            --error: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 2rem;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+            font-weight: 800;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid #475569;
+            background-color: #334155;
+            color: white;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        input[type="checkbox"] {
+            margin-right: 0.5rem;
+            transform: scale(1.2);
+        }
+
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: none;
+            background-color: var(--accent);
+            color: white;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        button:disabled {
+            background-color: #475569;
+            cursor: not-allowed;
+        }
+
+        .result-section {
+            display: none;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .status-success {
+            background-color: rgba(34, 197, 94, 0.2);
+            color: var(--success);
+        }
+
+        .status-warning {
+            background-color: rgba(234, 179, 8, 0.2);
+            color: var(--warning);
+        }
+
+        .status-error {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: var(--error);
+        }
+
+        pre {
+            background-color: #0f172a;
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.875rem;
+        }
+
+        .output-box h3 {
+            margin-top: 0;
+            color: var(--accent);
+        }
+
+        .output-box p {
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Financial Analysis API</h1>
+
+        <div class="card">
+            <div class="form-group">
+                <label for="ticker">Ticker Symbol</label>
+                <input type="text" id="ticker" placeholder="e.g. NVDA, AAPL, MSFT" value="NVDA">
+            </div>
+            <div class="form-group">
+                <label for="question">Analysis Question</label>
+                <input type="text" id="question" placeholder="e.g. Brief summary of risks" value="Brief summary">
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="use_ai" checked>
+                    Use AI Analysis
+                </label>
+            </div>
+            <button id="analyzeBtn" onclick="analyze()">Analyze</button>
+        </div>
+
+        <div id="result" class="result-section">
+            <div class="card">
+                <div id="statusBadge" class="status-badge status-success">Available</div>
+
+                <div id="aiContent" class="output-box">
+                    <h3>Executive Summary</h3>
+                    <p id="execSummary">Loading...</p>
+                    <h3>Risks</h3>
+                    <p id="risks">Loading...</p>
+                </div>
+
+                <details style="margin-top: 1rem;">
+                    <summary style="cursor: pointer; color: #94a3b8;">Raw JSON Response</summary>
+                    <pre id="rawJson">{}</pre>
+                </details>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function analyze() {
+            const btn = document.getElementById('analyzeBtn');
+            const resultDiv = document.getElementById('result');
+            const statusBadge = document.getElementById('statusBadge');
+
+            btn.disabled = true;
+            btn.textContent = "Analyzing...";
+            resultDiv.style.display = 'none';
+
+            const payload = {
+                ticker: document.getElementById('ticker').value.toUpperCase(),
+                question: document.getElementById('question').value,
+                use_ai: document.getElementById('use_ai').checked
+            };
+
+            try {
+                // Client-side timeout (15s)
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+                const res = await fetch('/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                const data = await res.json();
+                resultDiv.style.display = 'block';
+                document.getElementById('rawJson').textContent = JSON.stringify(data, null, 2);
+
+                if (res.status === 200) {
+                    let aiMsg = "Analysis Complete";
+                    let badgeClass = "status-success";
+
+                    if (!data.ai_used) {
+                        aiMsg = "AI Temporarily Unavailable (Quota/Error) - Showing Metrics Only";
+                        badgeClass = "status-warning";
+                    }
+
+                    statusBadge.textContent = aiMsg;
+                    statusBadge.className = `status-badge ${badgeClass}`;
+
+                    const answer = data.answer || {};
+                    document.getElementById('execSummary').textContent = answer["Executive Summary"] || "N/A";
+                    document.getElementById('risks').textContent = answer["Risks"] || "N/A";
+
+                } else {
+                    throw new Error(data.detail || `Server Error: ${res.status}`);
+                }
+
+            } catch (err) {
+                resultDiv.style.display = 'block';
+                statusBadge.textContent = err.name === 'AbortError' ? "Timeout (15s limit)" : `Error: ${err.message}`;
+                statusBadge.className = "status-badge status-error";
+                document.getElementById('execSummary').textContent = "Failed to retrieve analysis.";
+                document.getElementById('risks').textContent = "";
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Analyze";
+            }
+        }
+    </script>
+</body>
+
+</html>
