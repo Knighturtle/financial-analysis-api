@@ -30,6 +30,7 @@ from engine.ingest_sec import SECIngestor
 from engine.metrics import FinancialMetrics
 from engine.forecast import Forecaster
 from engine.ai_analysis import AIAnalyst
+from api.services.sec_edgar import SecService
 
 app = FastAPI(title="Financial Analysis API", version="1.0.0")
 
@@ -46,6 +47,7 @@ sec_ingestor = SECIngestor()
 metrics_engine = FinancialMetrics()
 forecaster = Forecaster()
 ai_analyst = AIAnalyst()
+sec_service = SecService()
 
 class AskRequest(BaseModel):
     ticker: str
@@ -73,6 +75,16 @@ async def startup_event():
 @app.get("/health")
 def health_check():
     return {"status": "ok", "message": "Financial Analysis API is ready."}
+
+@app.get("/sec/10k/latest")
+def get_latest_10k(ticker: str):
+    """
+    Fetches the latest 10-K filing HTML for a given ticker from SEC EDGAR.
+    """
+    result = sec_service.get_latest_10k(ticker)
+    if result["status"] != 200:
+        raise HTTPException(status_code=result["status"], detail=result.get("error", "Unknown error"))
+    return result["data"]
 
 @app.post("/ask", response_model=AskResponse)
 async def ask_financial_question(req: AskRequest):

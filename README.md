@@ -64,6 +64,22 @@ curl -X POST "http://127.0.0.1:8000/ask" \
      -d '{"ticker": "NVDA", "question": "Analyze risks", "use_ai": true}'
 ```
 
+### Retrieve Latest 10-K (/sec/10k/latest)
+
+Fetches the raw HTML of the most recent 10-K filing from SEC EDGAR.
+
+**PowerShell Example**:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/sec/10k/latest?ticker=NVDA"
+```
+
+**Curl Example**:
+
+```bash
+curl "http://127.0.0.1:8000/sec/10k/latest?ticker=NVDA"
+```
+
 ## Web UI Access
 
 The project includes a user-friendly Web UI.
