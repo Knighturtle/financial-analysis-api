@@ -64,6 +64,16 @@ curl -X POST "http://127.0.0.1:8000/ask" \
      -d '{"ticker": "NVDA", "question": "Analyze risks", "use_ai": true}'
 ```
 
+## Web UI Access
+
+The project includes a user-friendly Web UI.
+
+- **Home / Dashboard**: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+- **Demo Page** (Redirects to Home): [http://127.0.0.1:8000/demo](http://127.0.0.1:8000/demo)
+- **API Documentation**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+
+> **Note**: If `use_ai` is enabled but the OpenAI Quota is exceeded, the generic fallback response will be shown. You can uncheck "Use AI Analysis" in the UI to perform a metrics-only analysis.
+
 ## Disclaimer
 
 **Not investment advice.** This tool provides automated analysis for informational purposes only. Always verify data with official sources.
