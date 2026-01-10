@@ -160,5 +160,10 @@ async def ask_financial_question(req: AskRequest):
 async def serve_ui():
     return FileResponse("static/index.html")
 
+@app.get("/demo")
+def demo_redirect():
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/", status_code=302)
+
 # Mount Static Files
 app.mount("/static", StaticFiles(directory="static"), name="static")
