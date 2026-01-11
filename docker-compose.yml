@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    container_name: financial-analysis-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # Override OLLAMA_URL to point to the host machine
+      - OLLAMA_URL=http://host.docker.internal:11434
+      # Ensure basic settings are present if not in .env (but .env takes precedence for other values)
+      - HOST=0.0.0.0
+    extra_hosts:
+      # Critical for Windows/Mac Docker Desktop to access host localhost
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Mount data directory to persist cache outside container (optional but good for dev)
+      - ./data:/app/data
+    restart: unless-stopped

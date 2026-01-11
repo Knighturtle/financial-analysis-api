@@ -9,7 +9,7 @@ A local-first financial analysis tool that fetches **XBRL data** directly from S
 - **Local AI Analysis**: Generates professional Japanese/English reports using **Ollama** (supports `qwen2.5`, `llama3`, etc.).
 - **No Cloud Required**: Designed to run 100% locally (except for SEC data fetching).
 
-## Setup
+## Setup (Local)
 
 1. **Install Dependencies**
 
@@ -41,6 +41,49 @@ A local-first financial analysis tool that fetches **XBRL data** directly from S
    python -m uvicorn src.main:app --reload
    ```
 
+## Setup (Docker)
+
+If you prefer running the API in a container using **Docker Compose**:
+
+1. **Prerequisites**
+   - Docker Desktop installed (Windows/Mac/Linux).
+   - **Ollama** running on the HOST machine.
+
+     ```powershell
+     ollama serve
+     ollama pull qwen2.5:7b
+     ```
+
+   - `.env` file must exist with valid `SEC_USER_AGENT`.
+
+2. **Start API**
+   This builds the image and starts the `api` service.
+
+   ```powershell
+   docker compose up --build -d
+   ```
+
+   *Note: Using `host.docker.internal` allows the container to talk to your host's Ollama at port 11434.*
+
+3. **Verify**
+   Run the verification script (PowerShell):
+
+   ```powershell
+   ./scripts/docker_verify.ps1
+   ```
+
+   Or manually:
+
+   ```powershell
+   curl http://localhost:8000/health
+   ```
+
+4. **Stop**
+
+   ```powershell
+   docker compose down
+   ```
+
 ## API Usage
 
 ### 1. Get Financial Metrics (XBRL)
@@ -65,6 +108,33 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/ai/analyze/xbrl" `
 ```
 
 Returns JSON with `executive_summary`, `key_metrics_commentary`, `risks_summary`, etc.
+
+## Windows (PS) Quick Test
+
+Run these commands in PowerShell to verify your local setup:
+
+1. **Check Health**:
+
+   ```powershell
+   Invoke-RestMethod "http://127.0.0.1:8000/health"
+   # OR
+   curl.exe "http://127.0.0.1:8000/health"
+   ```
+
+2. **Get Metrics (XBRL)**:
+
+   ```powershell
+   Invoke-RestMethod "http://127.0.0.1:8000/sec/xbrl/metrics?ticker=AAPL&years=4"
+   ```
+
+3. **Run AI Analysis**:
+
+   ```powershell
+   Invoke-RestMethod -Uri "http://127.0.0.1:8000/ai/analyze/xbrl" `
+     -Method Post `
+     -ContentType "application/json" `
+     -Body '{"ticker": "AAPL"}'
+   ```
 
 ## Disclaimer
 
