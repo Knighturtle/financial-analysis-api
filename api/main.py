@@ -71,6 +71,9 @@ class AnalyzeRequest(BaseModel):
     focus: str = "overview"
     use_ai: bool = True
     max_chars: int = 60000
+    use_finbert: bool = False
+    use_llm: bool = False
+    finbert_top_n: int = 15
 
 @app.post("/sec/10k/analyze")
 async def analyze_10k_endpoint(req: AnalyzeRequest):
@@ -87,18 +90,35 @@ async def analyze_10k_endpoint(req: AnalyzeRequest):
     # 2. Analyze
     ai_used = False
     analysis = {}
+    finbert_res = None
+    llm_res = None
     
-    if req.use_ai:
+    # Determine if any AI is requested
+    if req.use_ai or req.use_finbert or req.use_llm:
         # Run in threadpool
-        analysis = await asyncio.to_thread(
+        combined_result = await asyncio.to_thread(
             ai_analyst.analyze_10k_content,
             ticker=req.ticker,
             html_content=sec_data["html"],
             focus=req.focus,
-            max_chars=req.max_chars
+            max_chars=req.max_chars,
+            use_finbert=req.use_finbert,
+            use_llm=req.use_llm,
+            finbert_top_n=req.finbert_top_n
         )
-        if analysis.get("executive_summary") != "AI Analysis Unavailable (Quota exceeded or Key missing).":
+        
+        # Breakdown result for API response
+        finbert_res = combined_result.pop("finbert", None)
+        llm_res = combined_result.pop("llm", None)
+        analysis = combined_result # The rest is the analysis dict
+        
+        # Check if actually 'used' (simplistic check)
+        entry_chk = analysis.get("executive_summary", "")
+        if entry_chk and "Analysis not performed" not in entry_chk and "Unavailable" not in entry_chk:
             ai_used = True
+        if finbert_res or (llm_res and llm_res.get("used")):
+            ai_used = True
+
     else:
         # User opted out
         analysis = {
@@ -115,6 +135,8 @@ async def analyze_10k_endpoint(req: AnalyzeRequest):
         "focus": req.focus,
         "ai_used": ai_used,
         "analysis": analysis,
+        "finbert": finbert_res,
+        "llm": llm_res,
         "warnings": ["LLM output is informational only."] if ai_used else []
     }
 

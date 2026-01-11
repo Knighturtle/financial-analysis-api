@@ -7,5 +7,8 @@ python-dotenv
 openai
 beautifulsoup4
 lxml
-
-
+transformers
+torch
+sentencepiece
+accelerate
+bitsandbytes

@@ -47,6 +47,7 @@
             font-weight: 800;
             background: linear-gradient(to right, #3b82f6, #8b5cf6);
             -webkit-background-clip: text;
+            background-clip: text;
             color: transparent;
         }
 
@@ -352,8 +353,14 @@
                     </div>
                 </div>
                 <div class="checkbox-group">
-                    <input type="checkbox" id="deep_use_ai" checked> <label for="deep_use_ai">Enable AI Processing
-                        (Consumes Quota)</label>
+                    <input type="checkbox" id="deep_use_ai" checked> <label for="deep_use_ai">Enable OpenAI
+                        (Cloud)</label>
+                </div>
+                <div class="checkbox-group" style="margin-top:0.5rem">
+                    <input type="checkbox" id="deep_use_finbert"> <label for="deep_use_finbert">Use FinBERT (Risk
+                        Scoring - Local)</label>
+                    <input type="checkbox" id="deep_use_llm" style="margin-left:1rem"> <label for="deep_use_llm">Use
+                        Local LLM (Report - Local/Heavy)</label>
                 </div>
                 <button class="action-btn btn-purple" onclick="runDeepAnalysis()">Analyze Latest 10-K</button>
             </div>
@@ -367,6 +374,26 @@
                 <!-- Warning Banner -->
                 <div id="deep_warning" class="warning-banner" style="display:none;">
                     ⚠ AI Analysis Unavailable. Showing metadata only.
+                </div>
+
+                <!-- FinBERT Results -->
+                <div id="finbert_section"
+                    style="display:none; margin-bottom: 2rem; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; background: rgba(0,0,0,0.2);">
+                    <h3 style="margin-top:0">FinBERT Risk Analysis</h3>
+                    <div style="display:flex; gap:1rem; margin-bottom:1rem; font-size:0.9rem;">
+                        <div>Negative: <span id="fb_neg" style="color:var(--error); font-weight:bold">0</span></div>
+                        <div>Neutral: <span id="fb_neu">0</span></div>
+                        <div>Positive: <span id="fb_pos" style="color:var(--success)">0</span></div>
+                    </div>
+                    <table style="width:100%; border-collapse: collapse; font-size: 0.85rem;">
+                        <thead>
+                            <tr style="border-bottom:1px solid var(--border); text-align:left;">
+                                <th style="padding:0.5rem;">Score</th>
+                                <th style="padding:0.5rem;">Risk Sentence</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fb_rows"></tbody>
+                    </table>
                 </div>
 
                 <!-- Analysis Content -->
@@ -478,14 +505,16 @@
             const btn = document.querySelector('#deep button');
 
             btn.disabled = true;
-            btn.textContent = "Fetching & Analyzing 10-K (may take 30s)...";
+            btn.textContent = "Fetching & Analyzing 10-K (may take time)...";
             resultDiv.style.display = 'none';
 
             try {
                 const res = await POST('/sec/10k/analyze', {
                     ticker: document.getElementById('deep_ticker').value.toUpperCase(),
                     focus: document.getElementById('deep_focus').value,
-                    use_ai: document.getElementById('deep_use_ai').checked
+                    use_ai: document.getElementById('deep_use_ai').checked,
+                    use_finbert: document.getElementById('deep_use_finbert').checked,
+                    use_llm: document.getElementById('deep_use_llm').checked
                 });
 
                 resultDiv.style.display = 'block';
@@ -513,13 +542,36 @@
                     warnDiv.style.display = 'none';
                 }
 
-                // Parse Analysis
+                // FinBERT Render
+                const fbSec = document.getElementById('finbert_section');
+                if (res.finbert && !res.finbert.error) {
+                    fbSec.style.display = 'block';
+                    document.getElementById('fb_neg').textContent = res.finbert.summary_stats?.negative || 0;
+                    document.getElementById('fb_neu').textContent = res.finbert.summary_stats?.neutral || 0;
+                    document.getElementById('fb_pos').textContent = res.finbert.summary_stats?.positive || 0;
+
+                    const rows = res.finbert.top_risk_sentences || [];
+                    const tbody = document.getElementById('fb_rows');
+                    tbody.innerHTML = rows.map(r => `
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.05)">
+                            <td style="padding:0.5rem; color:${r.score > 0.9 ? 'var(--error)' : 'orange'}">${(r.score).toFixed(2)}</td>
+                            <td style="padding:0.5rem;">${r.text}</td>
+                        </tr>
+                    `).join('');
+                } else {
+                    fbSec.style.display = 'none';
+                }
+
+                // Parse Analysis (LLM or OpenAI)
                 const an = res.analysis || {};
                 setText('an_summary', an.executive_summary);
                 setList('an_points', an.key_points);
                 setList('an_risks', an.risks);
                 setList('an_drivers', an.financial_drivers);
                 setList('an_watch', an.what_to_watch);
+
+                // If Local LLM used, maybe indicate it in title?
+                // For now, standard display is fine.
 
             } catch (e) {
                 alert("Error: " + e.message);

@@ -1,128 +1,71 @@
-# Financial Analysis API 10-K Product
+# SEC XBRL Financial Analysis API
 
-This is a production-ready API for financial analysis based on SEC 10-K filings and quantitative metrics.
-It provides comprehensive insights including key financial metrics, forecasts, and risk assessments.
+A local-first financial analysis tool that fetches **XBRL data** directly from SEC EDGAR (companyfacts), calculates key metrics (Revenue, FCF, ROE, etc.), and generates AI-powered reports using **Ollama** (Local LLM).
 
 ## Features
 
-- **SEC Data Ingestion**: Reads 10-K text (local cache with CSV fallback).
-- **Financial Metrics**: Calculates Revenue Growth, Net Margin, ROE, FCF, and more.
-- **Forecasting**: Simple linear projection for future revenue.
-- **AI Analysis**: Generates structured narrative analysis using OpenAI (falls back to rule-based template if Key is missing).
+- **SEC XBRL Integration**: Fetches standardized financial data (US-GAAP) from [SEC EDGAR API](https://www.sec.gov/edgar/sec-api-documentation).
+- **Auto-Metrics**: Calculates Revenue, Net Margin, Operating Cash Flow, Capex, Free Cash Flow (FCF), ROE, and CAGR.
+- **Local AI Analysis**: Generates professional Japanese/English reports using **Ollama** (supports `qwen2.5`, `llama3`, etc.).
+- **No Cloud Required**: Designed to run 100% locally (except for SEC data fetching).
 
 ## Setup
 
-1. **Install Dependencies**:
+1. **Install Dependencies**
 
    ```powershell
-   python -m pip install -r requirements.txt
+   pip install -r requirements.txt
    ```
 
-2. **Environment Variables**:
-   Copy `.env.example` to `.env` and set your `OPENAI_API_KEY`.
+2. **Configure Environment**
+   Copy `.env.example` to `.env`.
+
+   **Critical**: Set `SEC_USER_AGENT` to "YourName <contact@email.com>" as required by SEC API.
+
+   ```ini
+   SEC_USER_AGENT=YourName contact@example.com
+   OLLAMA_URL=http://127.0.0.1:11434
+   LLM_PROFILE=finance
+   OUTPUT_LANG=ja
+   ```
+
+3. **Install Ollama Model**
 
    ```powershell
-   cp .env.example .env
+   ollama pull qwen2.5:7b
    ```
 
-   *Note: works without an API key in fallback mode.*
-
-3. **Run Server**:
+4. **Run Server**
 
    ```powershell
-   python -m uvicorn api.main:app --reload
+   python -m uvicorn src.main:app --reload
    ```
 
-## Usage
+## API Usage
 
-### Health Check
+### 1. Get Financial Metrics (XBRL)
 
-```powershell
-Invoke-RestMethod http://127.0.0.1:8000/health
+Fetches raw numerical data.
+
+```bash
+curl "http://127.0.0.1:8000/sec/xbrl/metrics?ticker=AAPL&years=4"
 ```
 
-### Financial Analysis (/ask)
+### 2. AI Analysis (End-to-End)
+
+Fetches metrics and generates an AI report.
 
 **PowerShell Example**:
 
 ```powershell
-$body = @{
-  ticker   = "NVDA"
-  question = "Summarize the risks"
-  mode     = "standard"
-  use_ai   = $true
-} | ConvertTo-Json
-
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/ask -ContentType "application/json" -Body $body
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/ai/analyze/xbrl" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body '{"ticker": "NVDA"}'
 ```
 
-**Curl Example**:
-
-```bash
-curl -X POST "http://127.0.0.1:8000/ask" \
-     -H "Content-Type: application/json" \
-     -d '{"ticker": "NVDA", "question": "Analyze risks", "use_ai": true}'
-```
-
-### Retrieve Latest 10-K (/sec/10k/latest)
-
-Fetches the raw HTML of the most recent 10-K filing from SEC EDGAR.
-
-**PowerShell Example**:
-
-```powershell
-Invoke-RestMethod -Uri "http://127.0.0.1:8000/sec/10k/latest?ticker=NVDA"
-```
-
-**Curl Example**:
-
-```bash
-curl "http://127.0.0.1:8000/sec/10k/latest?ticker=NVDA"
-```
-
-### Analyze Latest 10-K (/sec/10k/analyze)
-
-Performs AI-driven analysis on the latest 10-K filing.
-
-**PowerShell Example**:
-
-```powershell
-$body = @{
-  ticker   = "NVDA"
-  focus    = "overview"
-  use_ai   = $true
-} | ConvertTo-Json
-
-Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/sec/10k/analyze" -ContentType "application/json" -Body $body
-```
-
-**Curl Example**:
-
-```bash
-curl -X POST "http://127.0.0.1:8000/sec/10k/analyze" \
-     -H "Content-Type: application/json" \
-     -d '{"ticker": "NVDA", "focus": "overview", "use_ai": true}'
-```
-
-## Web UI Access
-
-The project includes a user-friendly Web UI with two main modes:
-
-1. **Quick Metrics**: Standard financial analysis (Revenue, Margins, Forecast).
-2. **Deep 10-K Research**: AI-powered analysis of the latest SEC 10-K filing.
-
-### How to Use
-
-1. Start the server: `python -m uvicorn api.main:app --reload`
-2. Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/) in your browser.
-3. Switch tabs to choose your analysis mode.
-4. Enter a Ticker (e.g. NVDA) and click Analyze.
-
-- **Home / Dashboard**: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
-- **API Documentation**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-
-> **Note**: If `use_ai` is enabled but the OpenAI Quota is exceeded, the generic fallback response will be shown. You can uncheck "Use AI Analysis" in the UI to perform a metrics-only analysis.
+Returns JSON with `executive_summary`, `key_metrics_commentary`, `risks_summary`, etc.
 
 ## Disclaimer
 
-**Not investment advice.** This tool provides automated analysis for informational purposes only. Always verify data with official sources.
+This tool uses public SEC data. Not investment advice.
