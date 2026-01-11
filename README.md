@@ -1,141 +1,121 @@
-# SEC XBRL Financial Analysis API
+# SEC XBRL AI Analyst (v1.0 MVP Ready)
 
-A local-first financial analysis tool that fetches **XBRL data** directly from SEC EDGAR (companyfacts), calculates key metrics (Revenue, FCF, ROE, etc.), and generates AI-powered reports using **Ollama** (Local LLM).
+**The Developer-First Financial Analysis Engine.**  
+Fetch accurate SEC XBRL data, visualize financial trends, and generate AI-powered investment memos running 100% locally.
+
+**Status**: v1.0 MVP Complete. Ready for distribution and sale.
+
+![UI Screenshot](docs/ui_screenshot.png)
+
+## What is this?
+
+This is a production-ready API and UI toolkit designed for **Developers** and **Financial Analysts**.
+It automates the boring parts of financial research:
+
+1. **Ingests Financial Data**: Fetches "Company Facts" (XBRL) directly from the SEC EDGAR API.
+2. **Calculates Metrics**: Automatically computes Revenue, Net Income, Margins, FCF, ROE, and CAGR.
+3. **Generates Insights**: Uses local LLMs (via **Ollama**) to write professional financial reports like a junior analyst.
+4. **Runs Everywhere**: Fully containerized with Docker Compose.
+
+**Stack**: FastAPI, Streamlit, Pandas, Plotly, Ollama.
 
 ## Features
 
-- **SEC XBRL Integration**: Fetches standardized financial data (US-GAAP) from [SEC EDGAR API](https://www.sec.gov/edgar/sec-api-documentation).
-- **Auto-Metrics**: Calculates Revenue, Net Margin, Operating Cash Flow, Capex, Free Cash Flow (FCF), ROE, and CAGR.
-- **Local AI Analysis**: Generates professional Japanese/English reports using **Ollama** (supports `qwen2.5`, `llama3`, etc.).
-- **No Cloud Required**: Designed to run 100% locally (except for SEC data fetching).
+- **Real-Time SEC Data**: No stale databases. Fetches directly from the source.
+- **Smart Year Parsing**: Prioritizes Calendar Year (CY) frames for accuracy.
+- **Multi-Language AI**: Supports generating reports in **English** or **Japanese** (Selectable).
+- **Privacy First**: Your financial queries never leave your machine (Local LLM).
+- **Developer Ready**: Clean REST API with Swagger docs.
+- **Instant UI**: Streamlit dashboard included for demos.
 
-## Setup (Local)
+---
 
-1. **Install Dependencies**
+## Quickstart (Docker)
 
-   ```powershell
-   pip install -r requirements.txt
-   ```
+The recommended way to run the full stack (API + UI).
 
-2. **Configure Environment**
-   Copy `.env.example` to `.env`.
+### Prerequisites
 
-   **Critical**: Set `SEC_USER_AGENT` to "YourName <contact@email.com>" as required by SEC API.
+1. **Docker Desktop** (running).
+2. **Ollama** (running on host).
 
-   ```ini
-   SEC_USER_AGENT=YourName contact@example.com
-   OLLAMA_URL=http://127.0.0.1:11434
-   LLM_PROFILE=finance
-   OUTPUT_LANG=ja
-   ```
+    ```powershell
+    ollama serve
+    ollama pull qwen2.5:7b
+    ```
 
-3. **Install Ollama Model**
+### Run
 
-   ```powershell
-   ollama pull qwen2.5:7b
-   ```
+1. **Configure**: Copy `.env.example` to `.env`.
+    *Critical: Set `SEC_USER_AGENT=Name contact@email.com` (SEC Requirement).*
 
-4. **Run Server**
+2. **Launch**:
 
-   ```powershell
-   python -m uvicorn src.main:app --reload
-   ```
+    ```powershell
+    docker compose up --build
+    ```
 
-## Setup (Docker)
+3. **Access**:
+    - **Dashboard**: [http://localhost:8501](http://localhost:8501)
+    - **API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-If you prefer running the API in a container using **Docker Compose**:
+---
 
-1. **Prerequisites**
-   - Docker Desktop installed (Windows/Mac/Linux).
-   - **Ollama** running on the HOST machine.
+## Developer Guide (API)
 
-     ```powershell
-     ollama serve
-     ollama pull qwen2.5:7b
-     ```
+You can use the API directly without the UI.
 
-   - `.env` file must exist with valid `SEC_USER_AGENT`.
+### 1. Get Financial Metrics
 
-2. **Start API**
-   This builds the image and starts the `api` service.
-
-   ```powershell
-   docker compose up --build -d
-   ```
-
-   *Note: Using `host.docker.internal` allows the container to talk to your host's Ollama at port 11434.*
-
-3. **Verify**
-   Run the verification script (PowerShell):
-
-   ```powershell
-   ./scripts/docker_verify.ps1
-   ```
-
-   Or manually:
-
-   ```powershell
-   curl http://localhost:8000/health
-   ```
-
-4. **Stop**
-
-   ```powershell
-   docker compose down
-   ```
-
-## API Usage
-
-### 1. Get Financial Metrics (XBRL)
-
-Fetches raw numerical data.
+Returns standardized XBRL data table.
 
 ```bash
-curl "http://127.0.0.1:8000/sec/xbrl/metrics?ticker=AAPL&years=4"
+# PowerShell (curl.exe)
+curl.exe "http://127.0.0.1:8000/sec/xbrl/metrics?ticker=NVDA&years=4"
 ```
 
-### 2. AI Analysis (End-to-End)
+### 2. Generate AI Report
 
-Fetches metrics and generates an AI report.
-
-**PowerShell Example**:
+Passes metrics to LLM for analysis. Support `output_lang` ("en" or "ja").
 
 ```powershell
+# PowerShell
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/ai/analyze/xbrl" `
   -Method Post `
   -ContentType "application/json" `
-  -Body '{"ticker": "NVDA"}'
+  -Body '{"ticker": "AAPL", "years": 4, "output_lang": "en"}'
 ```
 
-Returns JSON with `executive_summary`, `key_metrics_commentary`, `risks_summary`, etc.
+**Response (JSON)**:
 
-## Windows (PS) Quick Test
+```json
+{
+  "executive_summary": "AAPL has shown consistent revenue growth...",
+  "key_metrics_commentary": "Net margin of 25% indicates strong...",
+  "risks_summary": "Potential regulatory headwinds..."
+}
+```
 
-Run these commands in PowerShell to verify your local setup:
+---
 
-1. **Check Health**:
+## Verification
 
-   ```powershell
-   Invoke-RestMethod "http://127.0.0.1:8000/health"
-   # OR
-   curl.exe "http://127.0.0.1:8000/health"
-   ```
+We include scripts to check your deployment.
 
-2. **Get Metrics (XBRL)**:
+**Docker Verification**:
 
-   ```powershell
-   Invoke-RestMethod "http://127.0.0.1:8000/sec/xbrl/metrics?ticker=AAPL&years=4"
-   ```
+```powershell
+./scripts/verify_docker_mvp.ps1
+```
 
-3. **Run AI Analysis**:
+**Local (Windows) Quick Test**:
 
-   ```powershell
-   Invoke-RestMethod -Uri "http://127.0.0.1:8000/ai/analyze/xbrl" `
-     -Method Post `
-     -ContentType "application/json" `
-     -Body '{"ticker": "AAPL"}'
-   ```
+```powershell
+curl.exe "http://127.0.0.1:8000/health"
+```
+
+---
 
 ## Disclaimer
 
-This tool uses public SEC data. Not investment advice.
+This software aggregates public data from the SEC. It is for informational purposes only and does **not** constitute investment advice.

@@ -9,7 +9,7 @@ class AIAnalyst:
         self.api_key = os.getenv("OPENAI_API_KEY")
         self.client = OpenAI(api_key=self.api_key) if self.api_key else None
 
-    def analyze(self, ticker: str, question: str, metrics: Dict, forecast: Dict, sec_text: str) -> Dict[str, Any]:
+    def analyze(self, ticker: str, question: str, metrics: Dict, forecast: Dict, sec_text: str, output_lang: str = None) -> Dict[str, Any]:
         """
         Generates analysis text.
         If API key exists: Calls OpenAI.
@@ -35,7 +35,7 @@ class AIAnalyst:
         if os.getenv("OLLAMA_URL"):
             # Use Ollama
             try:
-                return self._call_ollama(ticker, question, data_summary, forecast_txt, sec_text)
+                return self._call_ollama(ticker, question, data_summary, forecast_txt, sec_text, output_lang)
             except Exception as e:
                 # Decide if fallback to OpenAI or fail? 
                 # User says "Implement Ollama", so if it fails, maybe fail or fallback.
@@ -71,10 +71,11 @@ class AIAnalyst:
              # Should not happen if api/main.py checks, but strict error here too
             raise ValueError("OpenAI API Key not set and Ollama not configured.")
 
-    def _call_ollama(self, ticker, question, data, forecast, sec_text):
+    def _call_ollama(self, ticker, question, data, forecast, sec_text, output_lang: str = None):
         from engine.llm_generation import generate_with_ollama
         
-        lang = os.getenv("OUTPUT_LANG", "ja").lower()
+        # Priority: explicit arg > env var > default 'ja'
+        lang = (output_lang or os.getenv("OUTPUT_LANG", "ja")).lower()
         is_english = lang == "en"
         
         # Define Language Specific Instructions

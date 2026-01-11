@@ -43,6 +43,7 @@ class AnalyzeRequest(BaseModel):
 class XBRLAnalyzeRequest(BaseModel):
     ticker: str
     years: Optional[int] = 4
+    output_lang: Optional[str] = None
 
 @app.get("/health")
 def health_check():
@@ -106,7 +107,8 @@ def analyze_xbrl(req: XBRLAnalyzeRequest):
             question="Financial Analysis based on XBRL Data",
             metrics=ai_metrics,
             forecast={}, # No forecast engine connected yet for this flow
-            sec_text=context_str # Pass data table as text context
+            sec_text=context_str, # Pass data table as text context
+            output_lang=req.output_lang
         )
         return result
     except Exception as e:
